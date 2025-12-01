@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
+import '../../router/app_router.dart';
+import '../../models/api_response.dart';
 import '../../models/deployment.dart';
 import '../../models/environment.dart';
+import '../../models/environment_url.dart';
 import '../../providers/deployment_provider.dart';
 import '../../services/deployment_service.dart';
 import '../../services/environment_service.dart';
+import '../../services/environment_url_service.dart';
 
 /// 部署执行页面
 class DeployPage extends ConsumerStatefulWidget {
@@ -20,18 +24,26 @@ class DeployPage extends ConsumerStatefulWidget {
 
 class _DeployPageState extends ConsumerState<DeployPage> {
   List<ProjectEnvironment> _configs = [];
+  List<EnvironmentUrl> _envUrls = [];
   bool _isLoading = true;
   String? _error;
   int? _selectedConfigId;
   bool _isDeploying = false;
+  final TextEditingController _urlController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadConfigs();
+    _loadData();
   }
 
-  Future<void> _loadConfigs() async {
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
     if (widget.projectId == null) {
       setState(() {
         _error = '请选择一个项目';
@@ -45,17 +57,35 @@ class _DeployPageState extends ConsumerState<DeployPage> {
       _error = null;
     });
 
-    final service = EnvironmentService();
-    final response = await service.getProjectEnvironments(widget.projectId!);
+    try {
+      final envService = EnvironmentService();
+      final urlService = EnvironmentUrlService();
 
-    if (response.success && response.data != null) {
+      final results = await Future.wait([
+        envService.getProjectEnvironments(widget.projectId!),
+        urlService.getAllUrls(),
+      ]);
+
+      final envResponse = results[0] as ApiResponse<List<ProjectEnvironment>>;
+      final urlResponse = results[1] as ApiResponse<List<EnvironmentUrl>>;
+
+      if (envResponse.success && envResponse.data != null) {
+        setState(() {
+          _configs = envResponse.data!.where((c) => c.enabled).toList();
+          if (urlResponse.success && urlResponse.data != null) {
+            _envUrls = urlResponse.data!;
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _error = envResponse.error ?? '加载失败';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _configs = response.data!.where((c) => c.enabled).toList();
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _error = response.error ?? '加载失败';
+        _error = '发生错误: $e';
         _isLoading = false;
       });
     }
@@ -71,6 +101,7 @@ class _DeployPageState extends ConsumerState<DeployPage> {
 
     try {
       final selectedConfig = _configs.firstWhere((c) => c.id == _selectedConfigId);
+      final envUrl = _urlController.text.trim();
 
       // Show confirmation dialog before actual deploy
       final confirmed = await showDialog<bool>(
@@ -85,6 +116,7 @@ class _DeployPageState extends ConsumerState<DeployPage> {
               Text('环境: ${selectedConfig.environment?.name ?? '未知'}'),
               Text('分支: ${selectedConfig.branch}'),
               Text('模式: ${selectedConfig.deployMode ?? '未知'}'),
+              if (envUrl.isNotEmpty) Text('API 地址: $envUrl'),
               const SizedBox(height: 10),
               const Text('⚠️ 请确认以上信息无误'),
             ],
@@ -109,7 +141,10 @@ class _DeployPageState extends ConsumerState<DeployPage> {
 
       final deployment = await ref
           .read(createDeploymentProvider.notifier)
-          .createDeployment(_selectedConfigId!);
+          .createDeployment(
+            _selectedConfigId!,
+            envUrl: envUrl.isNotEmpty ? envUrl : null,
+          );
 
       if (deployment == null) {
         if (mounted) {
@@ -161,7 +196,7 @@ class _DeployPageState extends ConsumerState<DeployPage> {
                 TextButton(
                   onPressed: () {
                     context.pop(); // 关闭对话框
-                    context.pop(); // 返回上一页
+                    context.go(AppRoutes.deployments); // 跳转到更新记录
                   },
                   child: const Text('确定'),
                 ),
@@ -225,7 +260,7 @@ class _DeployPageState extends ConsumerState<DeployPage> {
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: _loadConfigs,
+                        onPressed: _loadData,
                         child: const Text('重试'),
                       ),
                     ],
@@ -317,9 +352,52 @@ class _DeployPageState extends ConsumerState<DeployPage> {
                               },
                             ),
                           ),
+                          
+                          const SizedBox(height: 16),
+                          
+                          // API 地址输入/选择
+                          Autocomplete<String>(
+                            optionsBuilder: (TextEditingValue textEditingValue) {
+                              if (textEditingValue.text == '') {
+                                return _envUrls.map((e) => e.url);
+                              }
+                              return _envUrls
+                                  .where((e) => e.url.contains(textEditingValue.text))
+                                  .map((e) => e.url);
+                            },
+                            onSelected: (String selection) {
+                              _urlController.text = selection;
+                            },
+                            fieldViewBuilder: (
+                              BuildContext context,
+                              TextEditingController fieldTextEditingController,
+                              FocusNode fieldFocusNode,
+                              VoidCallback onFieldSubmitted,
+                            ) {
+                              // Sync internal controller with field controller
+                              if (_urlController.text != fieldTextEditingController.text) {
+                                fieldTextEditingController.text = _urlController.text;
+                              }
+                              // Listen for changes
+                              fieldTextEditingController.addListener(() {
+                                _urlController.text = fieldTextEditingController.text;
+                              });
+                              
+                              return TextField(
+                                controller: fieldTextEditingController,
+                                focusNode: fieldFocusNode,
+                                decoration: const InputDecoration(
+                                  labelText: 'API 地址 (可选)',
+                                  hintText: '输入或选择 API 地址',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.link),
+                                ),
+                              );
+                            },
+                          ),
 
                           // 部署按钮
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           SizedBox(
                             width: double.infinity,
                             child: FilledButton.icon(

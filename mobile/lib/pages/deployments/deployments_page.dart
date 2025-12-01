@@ -57,7 +57,7 @@ class _DeploymentsPageState extends ConsumerState<DeploymentsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('部署记录'),
+        title: const Text('更新记录'),
         centerTitle: true,
       ),
       body: Column(
@@ -146,7 +146,7 @@ class _DeploymentsPageState extends ConsumerState<DeploymentsPage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  '暂无部署记录',
+                                  '暂无更新记录',
                                   style: TextStyle(color: Colors.grey.shade600),
                                 ),
                               ],

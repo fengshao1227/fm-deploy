@@ -298,10 +298,12 @@ class CreateDeploymentNotifier extends StateNotifier<CreateDeploymentState> {
   CreateDeploymentNotifier() : super(CreateDeploymentState());
 
   /// 创建部署任务
-  Future<Deployment?> createDeployment(int projectEnvironmentId) async {
+  Future<Deployment?> createDeployment(int projectEnvironmentId,
+      {String? envUrl}) async {
     state = CreateDeploymentState(isCreating: true);
 
-    final response = await _service.createDeployment(projectEnvironmentId);
+    final response = await _service.createDeployment(projectEnvironmentId,
+        envUrl: envUrl);
 
     if (response.success && response.data != null) {
       state = CreateDeploymentState(deployment: response.data);

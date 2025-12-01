@@ -155,10 +155,10 @@ export class DeploymentController {
   /**
    * 创建部署任务
    * POST /api/deployments
-   * Body: { projectEnvironmentId }
+   * Body: { projectEnvironmentId, envUrl? }
    */
   static create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const { projectEnvironmentId } = req.body;
+    const { projectEnvironmentId, envUrl } = req.body;
 
     if (!projectEnvironmentId) {
       throw new AppError('项目环境配置ID为必填项', 400);
@@ -186,6 +186,7 @@ export class DeploymentController {
     const deployment = await deploymentService.createDeployment({
       projectEnvironmentId: Number(projectEnvironmentId),
       userId: req.user!.id,
+      envUrl: envUrl || undefined,
     });
 
     // 存储部署服务实例

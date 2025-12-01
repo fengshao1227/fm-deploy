@@ -9,10 +9,10 @@ class ApiConfig {
   static const String devAndroidEmulatorUrl = 'http://10.0.2.2:3000';
 
   // 生产环境
-  static const String prodBaseUrl = 'http://117.72.163.3:3000';
+  static const String prodBaseUrl = 'http://117.72.163.3:3001';
 
   // 当前使用的地址（可根据环境切换）
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
   static String get baseUrl {
     if (isProduction) return prodBaseUrl;
@@ -53,6 +53,9 @@ class ApiConfig {
 
   // API 路径 - 部署
   static const String deployments = '/api/deployments';
+
+  // API 路径 - 环境 URL
+  static const String environmentUrls = '/api/environment-urls';
 
   // 超时配置
   static const int connectTimeout = 10000; // 10秒

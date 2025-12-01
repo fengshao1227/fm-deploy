@@ -14,6 +14,7 @@ const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || path.join(process.cwd(), '.
 export interface DeploymentOptions {
   projectEnvironmentId: number;
   userId: number;
+  envUrl?: string;
 }
 
 export interface DeploymentProgress {
@@ -27,6 +28,7 @@ export class DeploymentService extends EventEmitter {
   private sshService: SSHService | null = null;
   private localBuildService: LocalBuildService | null = null;
   private projectEnvironment: ProjectEnvironment | null = null;
+  private envUrl?: string;
 
   /**
    * 创建部署任务
@@ -72,6 +74,7 @@ export class DeploymentService extends EventEmitter {
 
     this.deployment = deployment;
     this.projectEnvironment = projectEnvironment;
+    this.envUrl = options.envUrl;
 
     return deployment;
   }
@@ -210,7 +213,14 @@ export class DeploymentService extends EventEmitter {
         );
       }
 
-      // 8. 执行部署后命令（远程）
+      // 8. 创建或更新 .env 文件（如果提供了 envUrl）
+      if (this.envUrl) {
+        await this.log('info', '创建环境配置文件...', 'env');
+        await this.createEnvFile(remoteDeployPath, this.envUrl);
+        await this.log('info', '✅ 环境配置文件创建完成', 'env');
+      }
+
+      // 9. 执行部署后命令（远程）
       if (this.projectEnvironment!.postDeployCommand) {
         await this.log('info', '执行部署后命令...', 'post_deploy');
         await this.execCommand(
@@ -332,6 +342,13 @@ export class DeploymentService extends EventEmitter {
           deployPath,
           'build'
         );
+      }
+
+      // 创建或更新 .env 文件（如果提供了 envUrl）
+      if (this.envUrl) {
+        await this.log('info', '创建环境配置文件...', 'env');
+        await this.createEnvFile(deployPath, this.envUrl);
+        await this.log('info', '✅ 环境配置文件创建完成', 'env');
       }
 
       // 执行部署后命令
@@ -811,6 +828,33 @@ export class DeploymentService extends EventEmitter {
       createdAt: s.createdAt,
       deploymentId: s.deploymentId,
     }));
+  }
+
+  /**
+   * 创建或更新远程服务器上的 .env 文件
+   */
+  private async createEnvFile(deployPath: string, envUrl: string): Promise<void> {
+    if (!this.sshService) {
+      throw new Error('SSH 连接未建立');
+    }
+
+    // 构建 .env 文件内容
+    const envContent = `UMI_APP_API_BASE_URL=${envUrl}`;
+
+    // 远程 .env 文件路径
+    const remoteEnvPath = path.posix.join(deployPath, '.env');
+
+    // 先删除已存在的 .env 文件（如果存在）
+    const checkCmd = `test -f ${remoteEnvPath} && rm ${remoteEnvPath} || true`;
+    await this.sshService.exec(checkCmd);
+
+    // 创建新的 .env 文件
+    const createCmd = `echo '${envContent}' > ${remoteEnvPath}`;
+    await this.sshService.exec(createCmd);
+
+    // 设置文件权限（644）
+    const chmodCmd = `chmod 644 ${remoteEnvPath}`;
+    await this.sshService.exec(chmodCmd);
   }
 
   /**

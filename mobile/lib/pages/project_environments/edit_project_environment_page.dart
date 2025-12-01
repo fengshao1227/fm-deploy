@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/environment.dart';
-// import '../../providers/project_environment_provider.dart'; // Will need to create this
+import '../../providers/project_environment_provider.dart';
 
 class EditProjectEnvironmentPage extends ConsumerStatefulWidget {
   final int projectEnvironmentId;
@@ -23,11 +23,9 @@ class _EditProjectEnvironmentPageState extends ConsumerState<EditProjectEnvironm
   late TextEditingController _buildCommandController;
   late TextEditingController _preDeployCommandController;
   late TextEditingController _postDeployCommandController;
-  bool _enabled = true; // Default
-
-  ProjectEnvironment? _initialProjectEnvironment;
-  bool _isLoading = true;
-  String? _error;
+  bool _enabled = true;
+  bool _isSaving = false;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
@@ -37,53 +35,51 @@ class _EditProjectEnvironmentPageState extends ConsumerState<EditProjectEnvironm
     _buildCommandController = TextEditingController();
     _preDeployCommandController = TextEditingController();
     _postDeployCommandController = TextEditingController();
-    _loadProjectEnvironment();
   }
 
-  Future<void> _loadProjectEnvironment() async {
-    // TODO: Fetch project environment details using a provider
-    // For now, mock it or use an existing provider if found
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      // Placeholder for fetching data
-      // Assume we get a ProjectEnvironment object
-      _initialProjectEnvironment = ProjectEnvironment(
-        id: widget.projectEnvironmentId,
-        branch: 'main',
-        deployPath: '/var/www/my-app',
-        buildCommand: 'npm run build',
-        preDeployCommand: 'echo "Pre-deploy script"',
-        postDeployCommand: 'echo "Post-deploy script"',
-        enabled: true,
-        project: ProjectSimple(id: 1, name: 'My Project', projectKey: 'my-proj'),
-        environment: EnvironmentSimple(id: 1, name: 'Staging', sshHost: 'staging.example.com'),
-      );
-
-      _branchController.text = _initialProjectEnvironment!.branch;
-      _deployPathController.text = _initialProjectEnvironment!.deployPath;
-      _buildCommandController.text = _initialProjectEnvironment!.buildCommand ?? '';
-      _preDeployCommandController.text = _initialProjectEnvironment!.preDeployCommand ?? '';
-      _postDeployCommandController.text = _initialProjectEnvironment!.postDeployCommand ?? '';
-      _enabled = _initialProjectEnvironment!.enabled;
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+  void _initializeControllers(ProjectEnvironment projectEnv) {
+    if (!_hasInitialized) {
+      _branchController.text = projectEnv.branch;
+      _deployPathController.text = projectEnv.deployPath;
+      _buildCommandController.text = projectEnv.buildCommand ?? '';
+      _preDeployCommandController.text = projectEnv.preDeployCommand ?? '';
+      _postDeployCommandController.text = projectEnv.postDeployCommand ?? '';
+      _enabled = projectEnv.enabled;
+      _hasInitialized = true;
     }
   }
 
   Future<void> _saveChanges() async {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement save logic using a provider
-      // For now, just show a toast
-      Fluttertoast.showToast(msg: '保存更改: ${_branchController.text}');
-      context.pop();
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+
+    final updateData = {
+      'branch': _branchController.text.trim(),
+      'deployPath': _deployPathController.text.trim(),
+      'buildCommand': _buildCommandController.text.trim().isEmpty
+          ? null
+          : _buildCommandController.text.trim(),
+      'preDeployCommand': _preDeployCommandController.text.trim().isEmpty
+          ? null
+          : _preDeployCommandController.text.trim(),
+      'postDeployCommand': _postDeployCommandController.text.trim().isEmpty
+          ? null
+          : _postDeployCommandController.text.trim(),
+      'enabled': _enabled,
+    };
+
+    final success = await ref
+        .read(projectEnvironmentDetailProvider(widget.projectEnvironmentId).notifier)
+        .updateProjectEnvironment(updateData);
+
+    setState(() => _isSaving = false);
+
+    if (success && mounted) {
+      Fluttertoast.showToast(msg: '保存成功');
+      context.pop(true); // Return true to indicate success
+    } else {
+      Fluttertoast.showToast(msg: '保存失败');
     }
   }
 
@@ -99,115 +95,134 @@ class _EditProjectEnvironmentPageState extends ConsumerState<EditProjectEnvironm
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
+    final asyncProjectEnv = ref.watch(projectEnvironmentDetailProvider(widget.projectEnvironmentId));
+
+    return asyncProjectEnv.when(
+      loading: () => Scaffold(
         appBar: AppBar(title: const Text('编辑环境配置')),
         body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('编辑环境配置')),
-        body: Center(child: Text('加载失败: $_error')),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('编辑环境配置'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
+      error: (error, stack) => Scaffold(
+        appBar: AppBar(title: const Text('编辑环境配置')),
+        body: Center(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '项目: ${_initialProjectEnvironment!.project!.name}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '环境: ${_initialProjectEnvironment!.environment!.name}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _branchController,
-                decoration: const InputDecoration(
-                  labelText: '部署分支',
-                  hintText: '常用: master / develop / main',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '分支名称不能为空';
-                  }
-                  return null;
-                },
-              ),
+              Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _deployPathController,
-                decoration: const InputDecoration(
-                  labelText: '部署路径',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '部署路径不能为空';
-                  }
-                  return null;
-                },
-              ),
+              Text('加载失败: $error', style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _buildCommandController,
-                decoration: const InputDecoration(
-                  labelText: '构建命令 (可选)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _preDeployCommandController,
-                decoration: const InputDecoration(
-                  labelText: '部署前命令 (可选)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _postDeployCommandController,
-                decoration: const InputDecoration(
-                  labelText: '部署后命令 (可选)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('是否启用'),
-                value: _enabled,
-                onChanged: (value) {
-                  setState(() {
-                    _enabled = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _saveChanges,
-                  child: const Text('保存'),
-                ),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(projectEnvironmentDetailProvider(widget.projectEnvironmentId)),
+                child: const Text('重试'),
               ),
             ],
           ),
         ),
       ),
+      data: (projectEnv) {
+        // Initialize controllers with fetched data
+        _initializeControllers(projectEnv);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('编辑环境配置'),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (projectEnv.project != null)
+                    Text(
+                      '项目: ${projectEnv.project!.name}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  const SizedBox(height: 8),
+                  if (projectEnv.environment != null)
+                    Text(
+                      '环境: ${projectEnv.environment!.name}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _branchController,
+                    decoration: const InputDecoration(
+                      labelText: '部署分支',
+                      hintText: '常用: master / develop / main',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '分支名称不能为空';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _deployPathController,
+                    decoration: const InputDecoration(
+                      labelText: '部署路径',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return '部署路径不能为空';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _buildCommandController,
+                    decoration: const InputDecoration(
+                      labelText: '构建命令 (可选)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _preDeployCommandController,
+                    decoration: const InputDecoration(
+                      labelText: '部署前命令 (可选)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _postDeployCommandController,
+                    decoration: const InputDecoration(
+                      labelText: '部署后命令 (可选)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: const Text('是否启用'),
+                    value: _enabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _enabled = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _isSaving ? null : _saveChanges,
+                      child: Text(_isSaving ? '保存中...' : '保存'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

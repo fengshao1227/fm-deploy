@@ -4,6 +4,7 @@ import { ProjectController } from '../controllers/ProjectController';
 import { EnvironmentController } from '../controllers/EnvironmentController';
 import { ProjectEnvironmentController } from '../controllers/ProjectEnvironmentController';
 import { DeploymentController } from '../controllers/DeploymentController';
+import { EnvironmentUrlController } from '../controllers/EnvironmentUrlController';
 import { authMiddleware, requireRole } from '../middlewares/auth';
 
 const router = Router();
@@ -46,6 +47,16 @@ router.get('/deployments/:id/logs', authMiddleware, DeploymentController.getLogs
 router.post('/deployments/:id/rollback', authMiddleware, DeploymentController.rollback);
 router.post('/deployments/:id/cancel', authMiddleware, DeploymentController.cancel);
 router.get('/projects/:projectId/deployments', authMiddleware, DeploymentController.listByProject);
+
+// ============ 环境URL管理路由 ============
+router.get('/environment-urls/all', authMiddleware, EnvironmentUrlController.getAll);
+router.get('/environment-urls', authMiddleware, EnvironmentUrlController.list);
+router.get('/environment-urls/:id', authMiddleware, EnvironmentUrlController.getById);
+router.post('/environment-urls', authMiddleware, EnvironmentUrlController.create);
+router.put('/environment-urls/:id', authMiddleware, EnvironmentUrlController.update);
+router.delete('/environment-urls/:id', authMiddleware, EnvironmentUrlController.delete);
+router.post('/environment-urls/:id/use', authMiddleware, EnvironmentUrlController.incrementUsage);
+router.post('/environment-urls/find-or-create', authMiddleware, EnvironmentUrlController.findOrCreate);
 
 // ============ 版本回滚路由 ============
 router.get('/project-environments/:id/versions', authMiddleware, DeploymentController.getVersions);

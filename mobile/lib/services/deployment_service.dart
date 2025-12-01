@@ -103,10 +103,15 @@ class DeploymentService {
 
   /// 创建部署任务
   Future<ApiResponse<Deployment>> createDeployment(
-      int projectEnvironmentId) async {
+      int projectEnvironmentId, {String? envUrl}) async {
+    final Map<String, dynamic> data = {'projectEnvironmentId': projectEnvironmentId};
+    if (envUrl != null && envUrl.isNotEmpty) {
+      data['envUrl'] = envUrl;
+    }
+
     final response = await _api.post(
       ApiConfig.deployments,
-      data: {'projectEnvironmentId': projectEnvironmentId},
+      data: data,
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {

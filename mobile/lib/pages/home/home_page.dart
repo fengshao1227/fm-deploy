@@ -153,7 +153,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.5,
+                childAspectRatio: 1.3,
                 children: [
                   _QuickActionCard(
                     icon: Icons.folder,
@@ -171,8 +171,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                   _QuickActionCard(
                     icon: Icons.rocket_launch,
-                    title: '部署记录',
-                    subtitle: '查看部署历史',
+                    title: '更新记录',
+                    subtitle: '查看更新历史',
                     color: Colors.green,
                     onTap: () => context.go(AppRoutes.deployments),
                   ),

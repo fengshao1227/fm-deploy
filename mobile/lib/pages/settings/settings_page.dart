@@ -117,17 +117,6 @@ class SettingsPage extends ConsumerWidget {
                   style: TextStyle(color: Colors.grey),
                 ),
               ),
-              _SettingsTile(
-                icon: Icons.description_outlined,
-                title: 'API 地址',
-                trailing: Text(
-                  'localhost:3000',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
             ],
           ),
 
