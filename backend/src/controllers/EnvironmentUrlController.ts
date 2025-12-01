@@ -57,7 +57,7 @@ export class EnvironmentUrlController {
     const envUrlRepo = AppDataSource.getRepository(EnvironmentUrl);
 
     const envUrls = await envUrlRepo.find({
-      select: ['id', 'name', 'url', 'usageCount', 'lastUsedAt'],
+      select: ['id', 'name', 'url', 'usageCount', 'lastUsedAt', 'createdAt'],
       order: {
         usageCount: 'DESC',
         lastUsedAt: 'DESC'

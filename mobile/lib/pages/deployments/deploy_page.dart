@@ -7,10 +7,12 @@ import '../../models/api_response.dart';
 import '../../models/deployment.dart';
 import '../../models/environment.dart';
 import '../../models/environment_url.dart';
+import '../../models/project.dart'; // New import
 import '../../providers/deployment_provider.dart';
 import '../../services/deployment_service.dart';
 import '../../services/environment_service.dart';
 import '../../services/environment_url_service.dart';
+import '../../services/project_service.dart'; // New import
 
 /// 部署执行页面
 class DeployPage extends ConsumerStatefulWidget {
@@ -25,6 +27,7 @@ class DeployPage extends ConsumerStatefulWidget {
 class _DeployPageState extends ConsumerState<DeployPage> {
   List<ProjectEnvironment> _configs = [];
   List<EnvironmentUrl> _envUrls = [];
+  Project? _project; // New state variable
   bool _isLoading = true;
   String? _error;
   int? _selectedConfigId;
@@ -60,20 +63,26 @@ class _DeployPageState extends ConsumerState<DeployPage> {
     try {
       final envService = EnvironmentService();
       final urlService = EnvironmentUrlService();
+      final projectService = ProjectService(); // Instantiate ProjectService
 
       final results = await Future.wait([
         envService.getProjectEnvironments(widget.projectId!),
         urlService.getAllUrls(),
+        projectService.getProject(widget.projectId!), // Fetch project details
       ]);
 
       final envResponse = results[0] as ApiResponse<List<ProjectEnvironment>>;
       final urlResponse = results[1] as ApiResponse<List<EnvironmentUrl>>;
+      final projectResponse = results[2] as ApiResponse<Project>; // Get project response
 
       if (envResponse.success && envResponse.data != null) {
         setState(() {
-          _configs = envResponse.data!.where((c) => c.enabled).toList();
+          _configs = envResponse.data!.where((c) => (c as ProjectEnvironment).enabled).toList();
           if (urlResponse.success && urlResponse.data != null) {
             _envUrls = urlResponse.data!;
+          }
+          if (projectResponse.success && projectResponse.data != null) {
+            _project = projectResponse.data; // Store the project
           }
           _isLoading = false;
         });
@@ -100,7 +109,7 @@ class _DeployPageState extends ConsumerState<DeployPage> {
     setState(() => _isDeploying = true);
 
     try {
-      final selectedConfig = _configs.firstWhere((c) => c.id == _selectedConfigId);
+      final selectedConfig = _configs.firstWhere((c) => (c as ProjectEnvironment).id == _selectedConfigId);
       final envUrl = _urlController.text.trim();
 
       // Show confirmation dialog before actual deploy
@@ -196,7 +205,7 @@ class _DeployPageState extends ConsumerState<DeployPage> {
                 TextButton(
                   onPressed: () {
                     context.pop(); // 关闭对话框
-                    context.go(AppRoutes.deployments); // 跳转到更新记录
+                    context.pushReplacement('/deployments/${resultDeployment?.id ?? deployment.id}'); // 跳转到部署详情
                   },
                   child: const Text('确定'),
                 ),
@@ -353,51 +362,53 @@ class _DeployPageState extends ConsumerState<DeployPage> {
                             ),
                           ),
                           
-                          const SizedBox(height: 16),
-                          
+                          const SizedBox(height: 16), // Always show this space
+
                           // API 地址输入/选择
-                          Autocomplete<String>(
-                            optionsBuilder: (TextEditingValue textEditingValue) {
-                              if (textEditingValue.text == '') {
-                                return _envUrls.map((e) => e.url);
-                              }
-                              return _envUrls
-                                  .where((e) => e.url.contains(textEditingValue.text))
-                                  .map((e) => e.url);
-                            },
-                            onSelected: (String selection) {
-                              _urlController.text = selection;
-                            },
-                            fieldViewBuilder: (
-                              BuildContext context,
-                              TextEditingController fieldTextEditingController,
-                              FocusNode fieldFocusNode,
-                              VoidCallback onFieldSubmitted,
-                            ) {
-                              // Sync internal controller with field controller
-                              if (_urlController.text != fieldTextEditingController.text) {
-                                fieldTextEditingController.text = _urlController.text;
-                              }
-                              // Listen for changes
-                              fieldTextEditingController.addListener(() {
-                                _urlController.text = fieldTextEditingController.text;
-                              });
-                              
-                              return TextField(
-                                controller: fieldTextEditingController,
-                                focusNode: fieldFocusNode,
-                                decoration: const InputDecoration(
-                                  labelText: 'API 地址 (可选)',
-                                  hintText: '输入或选择 API 地址',
-                                  border: OutlineInputBorder(),
-                                  prefixIcon: Icon(Icons.link),
-                                ),
-                              );
-                            },
-                          ),
+                          if (_project?.isFrontend == true) ...[
+                            Autocomplete<String>(
+                              optionsBuilder: (TextEditingValue textEditingValue) {
+                                if (textEditingValue.text == '') {
+                                  return _envUrls.map((e) => e.url);
+                                }
+                                return _envUrls
+                                    .where((e) => e.url.contains(textEditingValue.text))
+                                    .map((e) => e.url);
+                              },
+                              onSelected: (String selection) {
+                                _urlController.text = selection;
+                              },
+                              fieldViewBuilder: (
+                                BuildContext context,
+                                TextEditingController fieldTextEditingController,
+                                FocusNode fieldFocusNode,
+                                VoidCallback onFieldSubmitted,
+                              ) {
+                                // Sync internal controller with field controller
+                                if (_urlController.text != fieldTextEditingController.text) {
+                                  fieldTextEditingController.text = _urlController.text;
+                                }
+                                // Listen for changes
+                                fieldTextEditingController.addListener(() {
+                                  _urlController.text = fieldTextEditingController.text;
+                                });
+                                
+                                return TextField(
+                                  controller: fieldTextEditingController,
+                                  focusNode: fieldFocusNode,
+                                  decoration: const InputDecoration(
+                                    labelText: 'API 地址 (可选)',
+                                    hintText: '输入或选择 API 地址',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.link),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 24), // Add space only if Autocomplete is shown
+                          ],
 
                           // 部署按钮
-                          const SizedBox(height: 24),
                           SizedBox(
                             width: double.infinity,
                             child: FilledButton.icon(

@@ -127,6 +127,18 @@ export class DeploymentController {
         finishedAt: deployment.finishedAt,
         errorMessage: deployment.errorMessage,
         createdAt: deployment.createdAt,
+        // Flattened project and environment for compatibility
+        project: {
+          id: deployment.projectEnvironment.project.id,
+          name: deployment.projectEnvironment.project.name,
+          projectKey: deployment.projectEnvironment.project.projectKey,
+          type: deployment.projectEnvironment.project.type,
+        },
+        environment: {
+          id: deployment.projectEnvironment.environment.id,
+          name: deployment.projectEnvironment.environment.name,
+          sshHost: deployment.projectEnvironment.environment.sshHost,
+        },
         projectEnvironment: {
           id: deployment.projectEnvironment.id,
           deployPath: deployment.projectEnvironment.deployPath,
@@ -211,6 +223,7 @@ export class DeploymentController {
         project: {
           id: projectEnvironment.project.id,
           name: projectEnvironment.project.name,
+          projectKey: projectEnvironment.project.projectKey,
         },
         environment: {
           id: projectEnvironment.environment.id,

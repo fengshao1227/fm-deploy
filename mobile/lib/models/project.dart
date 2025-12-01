@@ -1,3 +1,5 @@
+import 'environment.dart'; // Import ProjectEnvironment and Environment from here
+
 /// 项目模型
 class Project {
   final int id;
@@ -75,80 +77,6 @@ class Project {
       createdAt: createdAt,
       updatedAt: updatedAt,
       projectEnvironments: projectEnvironments,
-    );
-  }
-}
-
-/// 项目环境配置
-class ProjectEnvironment {
-  final int id;
-  final String deployPath;
-  final String branch;
-  final String? buildCommand;
-  final Environment? environment;
-
-  ProjectEnvironment({
-    required this.id,
-    required this.deployPath,
-    required this.branch,
-    this.buildCommand,
-    this.environment,
-  });
-
-  factory ProjectEnvironment.fromJson(Map<String, dynamic> json) {
-    return ProjectEnvironment(
-      id: json['id'] ?? 0,
-      deployPath: json['deployPath'] ?? '',
-      branch: json['branch'] ?? 'master',
-      buildCommand: json['buildCommand'],
-      environment: json['environment'] != null
-          ? Environment.fromJson(json['environment'])
-          : null,
-    );
-  }
-}
-
-/// 服务器环境
-class Environment {
-  final int id;
-  final String name;
-  final String? sshHost;
-
-  Environment({
-    required this.id,
-    required this.name,
-    this.sshHost,
-  });
-
-  factory Environment.fromJson(Map<String, dynamic> json) {
-    return Environment(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      sshHost: json['sshHost'],
-    );
-  }
-}
-
-/// 简单项目（用于下拉选择）
-class SimpleProject {
-  final int id;
-  final String name;
-  final String projectKey;
-  final String type;
-
-  SimpleProject({
-    required this.id,
-    required this.name,
-    required this.projectKey,
-    required this.type,
-  });
-
-  factory SimpleProject.fromJson(Map<String, dynamic> json) {
-    return SimpleProject(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      projectKey: json['projectKey'] ?? '',
-      type: json['type'] ?? 'frontend',
     );
   }
 }

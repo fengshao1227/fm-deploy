@@ -3,6 +3,11 @@ import '../models/api_response.dart';
 import '../models/project.dart';
 import '../services/project_service.dart';
 
+// 用于区分 null 作为未提供值还是显式赋值
+class _Sentinel {
+  const _Sentinel();
+}
+
 /// 项目列表状态
 class ProjectListState {
   final bool isLoading;
@@ -29,8 +34,8 @@ class ProjectListState {
     List<Project>? projects,
     Pagination? pagination,
     String? error,
-    String? typeFilter,
-    String? keyword,
+    Object? typeFilter = const _Sentinel(),
+    Object? keyword = const _Sentinel(),
   }) {
     return ProjectListState(
       isLoading: isLoading ?? this.isLoading,
@@ -38,8 +43,8 @@ class ProjectListState {
       projects: projects ?? this.projects,
       pagination: pagination ?? this.pagination,
       error: error,
-      typeFilter: typeFilter ?? this.typeFilter,
-      keyword: keyword ?? this.keyword,
+      typeFilter: typeFilter is _Sentinel ? this.typeFilter : typeFilter as String?,
+      keyword: keyword is _Sentinel ? this.keyword : keyword as String?,
     );
   }
 
@@ -121,7 +126,14 @@ class ProjectListNotifier extends StateNotifier<ProjectListState> {
 
   /// 设置筛选条件
   void setFilter({String? type, String? keyword}) {
-    loadProjects(type: type, keyword: keyword);
+    state = state.copyWith(
+      typeFilter: type,
+      keyword: keyword,
+    );
+    loadProjects(
+      type: state.typeFilter,
+      keyword: state.keyword,
+    );
   }
 
   /// 清除筛选

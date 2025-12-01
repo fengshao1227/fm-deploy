@@ -17,11 +17,13 @@ class EnvironmentUrl {
     return EnvironmentUrl(
       id: json['id'] as int,
       url: json['url'] as String,
-      useCount: json['useCount'] as int? ?? 0,
+      useCount: json['usageCount'] as int? ?? 0,
       lastUsedAt: json['lastUsedAt'] != null
-          ? DateTime.parse(json['lastUsedAt'] as String)
+          ? DateTime.tryParse(json['lastUsedAt'].toString())
           : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'].toString())
+          : DateTime.now(), // Fallback or make nullable
     );
   }
 

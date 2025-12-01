@@ -2,6 +2,7 @@ import '../config/api_config.dart';
 import '../models/api_response.dart';
 import '../models/project.dart';
 import 'api_service.dart';
+import '../models/environment.dart'; // New import for ProjectSimple
 
 /// 项目服务
 class ProjectService {
@@ -50,21 +51,21 @@ class ProjectService {
   }
 
   /// 获取所有项目（简单列表）
-  Future<ApiResponse<List<SimpleProject>>> getAllProjects() async {
+  Future<ApiResponse<List<ProjectSimple>>> getAllProjects() async {
     try {
       final response = await _api.get(ApiConfig.projectsAll);
 
-      return ApiResponse<List<SimpleProject>>(
+      return ApiResponse<List<ProjectSimple>>(
         success: response.data['success'] ?? false,
         data: response.data['success'] == true
             ? (response.data['data'] as List)
-                .map((e) => SimpleProject.fromJson(e))
+                .map((e) => ProjectSimple.fromJson(e))
                 .toList()
             : null,
         error: response.data['error'],
       );
     } catch (e) {
-      return ApiResponse<List<SimpleProject>>(
+      return ApiResponse<List<ProjectSimple>>(
         success: false,
         error: ApiService.getErrorMessage(e),
       );
