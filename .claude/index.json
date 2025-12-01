@@ -1,0 +1,155 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-12-01T10:20:34+08:00",
+  "project": {
+    "name": "fm-deploy",
+    "description": "FM Deploy - 项目自动化部署系统",
+    "rootDoc": "CLAUDE.md"
+  },
+  "modules": [
+    {
+      "name": "backend",
+      "path": "backend/",
+      "language": "TypeScript",
+      "framework": "Express.js + TypeORM",
+      "doc": "backend/CLAUDE.md",
+      "entry": "backend/src/index.ts",
+      "config": "backend/package.json",
+      "api": {
+        "routes": "backend/src/routes/index.ts",
+        "controllers": [
+          "backend/src/controllers/AuthController.ts",
+          "backend/src/controllers/ProjectController.ts",
+          "backend/src/controllers/EnvironmentController.ts",
+          "backend/src/controllers/ProjectEnvironmentController.ts",
+          "backend/src/controllers/DeploymentController.ts"
+        ]
+      },
+      "models": [
+        "backend/src/models/User.ts",
+        "backend/src/models/Project.ts",
+        "backend/src/models/Environment.ts",
+        "backend/src/models/ProjectEnvironment.ts",
+        "backend/src/models/Deployment.ts",
+        "backend/src/models/DeploymentLog.ts",
+        "backend/src/models/DeploymentSnapshot.ts"
+      ],
+      "services": [
+        "backend/src/services/DeploymentService.ts",
+        "backend/src/services/SSHService.ts",
+        "backend/src/services/LocalBuildService.ts",
+        "backend/src/services/WebSocketService.ts"
+      ],
+      "tests": null,
+      "coverage": {
+        "filesScanned": 25,
+        "hasTests": false,
+        "hasApi": true,
+        "hasModels": true,
+        "hasServices": true
+      }
+    },
+    {
+      "name": "mobile",
+      "path": "mobile/",
+      "language": "Dart",
+      "framework": "Flutter + Riverpod",
+      "doc": "mobile/CLAUDE.md",
+      "entry": "mobile/lib/main.dart",
+      "config": "mobile/pubspec.yaml",
+      "router": "mobile/lib/router/app_router.dart",
+      "pages": [
+        "mobile/lib/pages/login/login_page.dart",
+        "mobile/lib/pages/home/home_page.dart",
+        "mobile/lib/pages/projects/projects_page.dart",
+        "mobile/lib/pages/projects/project_detail_page.dart",
+        "mobile/lib/pages/environments/environments_page.dart",
+        "mobile/lib/pages/environments/environment_detail_page.dart",
+        "mobile/lib/pages/deployments/deployments_page.dart",
+        "mobile/lib/pages/deployments/deployment_detail_page.dart",
+        "mobile/lib/pages/deployments/deploy_page.dart",
+        "mobile/lib/pages/settings/settings_page.dart",
+        "mobile/lib/pages/settings/change_password_page.dart"
+      ],
+      "models": [
+        "mobile/lib/models/user.dart",
+        "mobile/lib/models/project.dart",
+        "mobile/lib/models/environment.dart",
+        "mobile/lib/models/deployment.dart",
+        "mobile/lib/models/api_response.dart"
+      ],
+      "services": [
+        "mobile/lib/services/api_service.dart",
+        "mobile/lib/services/auth_service.dart",
+        "mobile/lib/services/project_service.dart",
+        "mobile/lib/services/environment_service.dart",
+        "mobile/lib/services/deployment_service.dart",
+        "mobile/lib/services/websocket_service.dart"
+      ],
+      "providers": [
+        "mobile/lib/providers/auth_provider.dart",
+        "mobile/lib/providers/project_provider.dart",
+        "mobile/lib/providers/environment_provider.dart",
+        "mobile/lib/providers/deployment_provider.dart"
+      ],
+      "tests": null,
+      "coverage": {
+        "filesScanned": 32,
+        "hasTests": false,
+        "hasRouter": true,
+        "hasModels": true,
+        "hasServices": true,
+        "hasProviders": true
+      }
+    }
+  ],
+  "docs": [
+    {
+      "path": "docs/QUICK_START.md",
+      "title": "快速开始指南"
+    },
+    {
+      "path": "README.md",
+      "title": "项目 README"
+    }
+  ],
+  "scanning": {
+    "timestamp": "2025-12-01T10:20:34+08:00",
+    "estimatedTotalFiles": 100,
+    "scannedFiles": 57,
+    "coveragePercent": 57,
+    "truncated": false,
+    "ignored": {
+      "patterns": [
+        "node_modules/**",
+        ".git/**",
+        "dist/**",
+        "build/**",
+        "mobile/build/**",
+        "*.log",
+        "*.lock"
+      ],
+      "reasons": {
+        "node_modules": "依赖目录，文件过多",
+        "build": "构建输出目录",
+        ".git": "版本控制目录"
+      }
+    }
+  },
+  "gaps": {
+    "backend": [
+      "测试目录缺失",
+      "API 文档未自动生成"
+    ],
+    "mobile": [
+      "测试目录缺失",
+      "Widget 测试未编写"
+    ]
+  },
+  "recommendations": [
+    "添加后端单元测试 (Jest)",
+    "添加移动端 Widget 测试",
+    "完善 API 文档 (Swagger/OpenAPI)",
+    "添加 CI/CD 配置文件"
+  ]
+}

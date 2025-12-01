@@ -1,0 +1,96 @@
+@baseUrl = http://localhost:3000
+@token =
+
+### 健康检查
+GET {{baseUrl}}/api/health
+
+### ============ 登录测试 ============
+
+### 登录 - 管理员 (成功)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 登录 - 开发者 (成功)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "developer",
+  "password": "dev123"
+}
+
+### 登录 - 错误密码 (失败)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "wrongpassword"
+}
+
+### 登录 - 不存在的用户 (失败)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "notexist",
+  "password": "password"
+}
+
+### 登录 - 缺少参数 (失败)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin"
+}
+
+### ============ 用户信息测试 ============
+
+### 获取当前用户信息 (需要先登录并复制token到上面的@token变量)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### 获取用户信息 - 无token (失败)
+GET {{baseUrl}}/api/auth/me
+
+### 获取用户信息 - 无效token (失败)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer invalid_token_here
+
+### ============ 修改密码测试 ============
+
+### 修改密码 (成功)
+POST {{baseUrl}}/api/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "oldPassword": "admin123",
+  "newPassword": "newpassword123"
+}
+
+### 修改密码 - 旧密码错误 (失败)
+POST {{baseUrl}}/api/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "oldPassword": "wrongpassword",
+  "newPassword": "newpassword123"
+}
+
+### 修改密码 - 新密码太短 (失败)
+POST {{baseUrl}}/api/auth/change-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "oldPassword": "admin123",
+  "newPassword": "123"
+}
